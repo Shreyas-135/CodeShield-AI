@@ -1,5 +1,3 @@
-// This file defines a Genkit flow for suggesting secure fixes for detected vulnerabilities using AI.
-
 'use server';
 
 /**
