@@ -1,10 +1,7 @@
-// Detects potential vulnerabilities in a code snippet.
-
 'use server';
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { randomUUID } from 'crypto';
 
 const VulnerabilitySchema = z.object({
   type: z.string().describe('The type of vulnerability (e.g., "SQL Injection", "Hardcoded Secret").'),
@@ -16,6 +13,7 @@ const VulnerabilitySchema = z.object({
 
 const DetectVulnerabilitiesInputSchema = z.object({
   code: z.string().describe('The code snippet to scan for vulnerabilities.'),
+  pastVulnerabilityTypes: z.array(z.string()).optional().describe('An optional list of vulnerability types that have been detected in previous scans. The scanner should pay special attention to these.'),
 });
 export type DetectVulnerabilitiesInput = z.infer<typeof DetectVulnerabilitiesInputSchema>;
 
@@ -32,23 +30,33 @@ export async function detectVulnerabilities(input: DetectVulnerabilitiesInput): 
   return result;
 }
 
-const prompt = ai.definePrompt({
-  name: 'detectVulnerabilitiesPrompt',
-  input: { schema: DetectVulnerabilitiesInputSchema },
-  output: { schema: DetectVulnerabilitiesOutputSchema },
-  prompt: `You are an expert security code scanner. Analyze the following code snippet for potential vulnerabilities.
+const promptTemplate = `You are an expert security code scanner. Analyze the following code snippet for potential vulnerabilities.
   
 Identify common security issues such as SQL Injection, Cross-Site Scripting (XSS), hardcoded secrets, insecure deserialization, command injection, and other OWASP Top 10 vulnerabilities.
 
 For each vulnerability you find, provide the type, a description, the vulnerable code snippet, a placeholder filename, and an estimated line number.
 
+{{#if pastVulnerabilityTypes}}
+You have identified the following types of vulnerabilities in the past. Pay special attention to these patterns as they may indicate recurring mistakes made by the AI that generated this code:
+{{#each pastVulnerabilityTypes}}
+- {{this}}
+{{/each}}
+This context should help you perform a more targeted and effective scan.
+{{/if}}
+
 If no vulnerabilities are found, return an empty array for the "vulnerabilities" field.
 
 Code Snippet:
 '''
-{{code}}
+{{{code}}}
 '''
-`,
+`;
+
+const prompt = ai.definePrompt({
+  name: 'detectVulnerabilitiesPrompt',
+  input: { schema: DetectVulnerabilitiesInputSchema },
+  output: { schema: DetectVulnerabilitiesOutputSchema },
+  prompt: promptTemplate,
 });
 
 const detectVulnerabilitiesFlow = ai.defineFlow(
