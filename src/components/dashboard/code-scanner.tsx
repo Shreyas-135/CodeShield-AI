@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Code, Github, Loader, Search, FileCode, Server, Cloud, BrainCircuit, History } from 'lucide-react';
+import { Code, Github, Loader, Search, FileCode, Server, Cloud, BrainCircuit, History, GitPullRequest } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,17 +18,34 @@ import { Badge } from '../ui/badge';
 
 type ModelProvider = 'cloud' | 'local';
 
+const sampleVulnerableCode = `
+import mysql.connector
+
+def get_user(user_id):
+    db = mysql.connector.connect(user='root', password='password', host='localhost', database='testdb')
+    cursor = db.cursor()
+    # This is vulnerable to SQL Injection
+    cursor.execute("SELECT * FROM users WHERE id = '" + user_id + "'")
+    user = cursor.fetchone()
+    return user
+
+# Hardcoded secret
+API_KEY = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+
+print("Using API Key:", API_KEY)
+`;
+
 export function CodeScanner() {
   const [code, setCode] = useState('');
-  const [repoUrl, setRepoUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<UIVulnerability[] | null>(null);
   const [modelProvider, setModelProvider] = useState<ModelProvider>('cloud');
   const [mistakeMemory, setMistakeMemory] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState('paste-code');
   const { toast } = useToast();
 
-  const handleScan = async () => {
-    if (!code.trim()) {
+  const handleScan = async (codeToScan: string) => {
+    if (!codeToScan.trim()) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -49,7 +66,7 @@ export function CodeScanner() {
 
     try {
       const result = await detectVulnerabilities({ 
-        code,
+        code: codeToScan,
         pastVulnerabilityTypes: mistakeMemory
       });
       const vulnerabilitiesWithIds = result.vulnerabilities.map(v => ({...v, id: self.crypto.randomUUID()}));
@@ -74,12 +91,18 @@ export function CodeScanner() {
         setIsLoading(false);
     }
   };
-
-  const handleRepoScan = () => {
+  
+  const handleSimulatePrScan = () => {
     toast({
-        title: "Feature Coming Soon",
-        description: "GitHub repository scanning is currently in development.",
+        title: "Simulating PR Scan",
+        description: "Populating with sample vulnerable code from a mock pull request.",
     })
+    setCode(sampleVulnerableCode);
+    setActiveTab('paste-code');
+    // Use a timeout to ensure the tab has switched and code is set before scanning
+    setTimeout(() => {
+        handleScan(sampleVulnerableCode);
+    }, 100);
   }
 
   return (
@@ -96,10 +119,10 @@ export function CodeScanner() {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-            <Tabs defaultValue="paste-code">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="paste-code"><FileCode className="mr-2" /> Paste Code</TabsTrigger>
-                    <TabsTrigger value="github-repo"><Github className="mr-2" /> GitHub Repo</TabsTrigger>
+                    <TabsTrigger value="pre-merge-auditor"><GitPullRequest className="mr-2" /> Pre-Merge Auditor</TabsTrigger>
                 </TabsList>
                 <TabsContent value="paste-code">
                     <Card>
@@ -148,31 +171,28 @@ export function CodeScanner() {
                             )}
 
 
-                            <Button onClick={handleScan} disabled={isLoading} className="w-full sm:w-auto">
+                            <Button onClick={() => handleScan(code)} disabled={isLoading} className="w-full sm:w-auto">
                                 {isLoading ? <><Loader className="mr-2 h-4 w-4 animate-spin" /> Scanning...</> : 'Scan Code'}
                             </Button>
                         </CardContent>
                     </Card>
                 </TabsContent>
-                <TabsContent value="github-repo">
+                <TabsContent value="pre-merge-auditor">
                     <Card>
                         <CardHeader>
-                            <CardTitle>GitHub Repository</CardTitle>
-                            <CardDescription>Enter a public repository URL to scan for vulnerabilities.</CardDescription>
+                            <CardTitle>Pre-Merge AI Code Auditor</CardTitle>
+                            <CardDescription>Simulate scanning a pull request before it gets merged to catch vulnerabilities early.</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex gap-2">
-                                <Input 
-                                    placeholder="https://github.com/user/repo" 
-                                    value={repoUrl} 
-                                    onChange={e => setRepoUrl(e.target.value)}
-                                    disabled
-                                />
-                                <Button onClick={handleRepoScan} disabled>
-                                    Scan Repository
-                                </Button>
+                        <CardContent className="space-y-4 text-center">
+                            <div className="flex justify-center">
+                                <GitPullRequest className="w-16 h-16 text-muted-foreground/50" />
                             </div>
-                            <p className="text-sm text-muted-foreground">GitHub integration is for demonstration purposes and will be available soon.</p>
+                            <p className="text-sm text-muted-foreground">
+                                This feature demonstrates how CodeShield can act as a security gate for AI contributions. Clicking the button will load sample vulnerable code from a mock PR and scan it automatically.
+                            </p>
+                            <Button onClick={handleSimulatePrScan}>
+                                Simulate PR Scan
+                            </Button>
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -241,3 +261,5 @@ export function CodeScanner() {
     </div>
   );
 }
+
+    
