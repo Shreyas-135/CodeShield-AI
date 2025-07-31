@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Code, Github, Loader, Search, FileCode, Server, Cloud, BrainCircuit, History, GitPullRequest } from 'lucide-react';
+import { Code, Github, Loader, Search, FileCode, Server, Cloud, BrainCircuit, History, GitPullRequest, ShieldCheck, ShieldAlert, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,13 +10,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { VulnerabilityCard } from './vulnerability-card';
 import { Skeleton } from '../ui/skeleton';
-import { detectVulnerabilities, UIVulnerability } from '@/ai/flows/detect-vulnerabilities';
+import { detectVulnerabilities, UIVulnerability, DetectVulnerabilitiesOutput } from '@/ai/flows/detect-vulnerabilities';
 import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Badge } from '../ui/badge';
+import { Progress } from '../ui/progress';
 
 type ModelProvider = 'cloud' | 'local';
+type ScanResults = DetectVulnerabilitiesOutput & { vulnerabilities: UIVulnerability[] };
 
 const sampleVulnerableCode = `
 import mysql.connector
@@ -38,7 +40,7 @@ print("Using API Key:", API_KEY)
 export function CodeScanner() {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [results, setResults] = useState<UIVulnerability[] | null>(null);
+  const [results, setResults] = useState<ScanResults | null>(null);
   const [modelProvider, setModelProvider] = useState<ModelProvider>('cloud');
   const [mistakeMemory, setMistakeMemory] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('paste-code');
@@ -70,7 +72,7 @@ export function CodeScanner() {
         pastVulnerabilityTypes: mistakeMemory
       });
       const vulnerabilitiesWithIds = result.vulnerabilities.map(v => ({...v, id: self.crypto.randomUUID()}));
-      setResults(vulnerabilitiesWithIds);
+      setResults({...result, vulnerabilities: vulnerabilitiesWithIds});
 
       // Update mistake memory with new, unique vulnerability types
       const newVulnerabilityTypes = vulnerabilitiesWithIds.map(v => v.type);
@@ -104,6 +106,12 @@ export function CodeScanner() {
         handleScan(sampleVulnerableCode);
     }, 100);
   }
+  
+    const getTrustScoreColor = (score: number) => {
+        if (score >= 80) return 'text-green-500';
+        if (score >= 50) return 'text-yellow-500';
+        return 'text-red-500';
+    };
 
   return (
     <div className="space-y-8">
@@ -243,23 +251,41 @@ export function CodeScanner() {
       {results && (
         <div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">Vulnerability Report</h2>
-          {results.length === 0 ? (
-            <Card>
-                <CardContent className="p-6 text-center text-muted-foreground">
-                    No vulnerabilities found.
+          <div className="grid gap-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-6 h-6 text-primary" />
+                    <CardTitle>Trust Score</CardTitle>
+                  </div>
+                  <CardDescription>A score from 0-100 that quantifies the trustworthiness of the scanned code.</CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                    <div className={`text-6xl font-bold ${getTrustScoreColor(results.trustScore)}`}>
+                        {results.trustScore}
+                    </div>
+                    <p className="font-semibold text-lg text-muted-foreground">{results.trustScoreSummary}</p>
+                    <Progress value={results.trustScore} className="mt-4" />
                 </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-                {results.map((vuln) => (
-                <VulnerabilityCard key={vuln.id} vulnerability={vuln} />
-                ))}
-            </div>
-          )}
+              </Card>
+
+            {results.vulnerabilities.length === 0 ? (
+                <Card>
+                    <CardContent className="p-6 text-center text-muted-foreground flex items-center justify-center gap-2">
+                        <ShieldCheck className="w-5 h-5 text-green-500" />
+                        <span>No vulnerabilities found. The code seems safe.</span>
+                    </CardContent>
+                </Card>
+            ) : (
+                <div className="space-y-4">
+                    {results.vulnerabilities.map((vuln) => (
+                    <VulnerabilityCard key={vuln.id} vulnerability={vuln} />
+                    ))}
+                </div>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 }
-
-    
