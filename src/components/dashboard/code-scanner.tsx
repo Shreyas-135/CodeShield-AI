@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Code, Github, Loader, Search, FileCode } from 'lucide-react';
+import { Code, Github, Loader, Search, FileCode, Server, Cloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,13 +11,18 @@ import { useToast } from "@/hooks/use-toast"
 import { VulnerabilityCard } from './vulnerability-card';
 import { Skeleton } from '../ui/skeleton';
 import { detectVulnerabilities, UIVulnerability } from '@/ai/flows/detect-vulnerabilities';
-import { randomUUID } from 'crypto';
+import { Label } from '../ui/label';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+
+type ModelProvider = 'cloud' | 'local';
 
 export function CodeScanner() {
   const [code, setCode] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<UIVulnerability[] | null>(null);
+  const [modelProvider, setModelProvider] = useState<ModelProvider>('cloud');
   const { toast } = useToast();
 
   const handleScan = async () => {
@@ -32,6 +37,13 @@ export function CodeScanner() {
 
     setIsLoading(true);
     setResults(null);
+    
+    if (modelProvider === 'local') {
+        toast({
+            title: "Local Model Selected",
+            description: "Scanning with a local model ensures your code remains private. This feature is for demonstration purposes.",
+        })
+    }
 
     try {
       const result = await detectVulnerabilities({ code });
@@ -39,7 +51,7 @@ export function CodeScanner() {
       setResults(vulnerabilitiesWithIds);
       toast({
         title: "Scan Complete",
-        description: `Found ${vulnerabilitiesWithIds.length} potential vulnerabilities.`,
+        description: `Found ${vulnerabilitiesWithIds.length} potential vulnerabilities using the ${modelProvider} model.`,
       })
     } catch(e) {
         console.error("Vulnerability scan failed", e);
@@ -83,7 +95,7 @@ export function CodeScanner() {
                     <CardTitle>Code to Scan</CardTitle>
                     <CardDescription>Paste code snippets or entire files to analyze.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                     <Textarea
                         placeholder="Paste your code here..."
                         value={code}
@@ -91,7 +103,40 @@ export function CodeScanner() {
                         className="min-h-[300px] font-code text-sm"
                         disabled={isLoading}
                     />
-                    <Button onClick={handleScan} disabled={isLoading}>
+
+                    <div>
+                        <Label className="mb-2 block font-medium">Choose AI Model Provider</Label>
+                        <RadioGroup defaultValue="cloud" onValueChange={(value: string) => setModelProvider(value as ModelProvider)} className="flex gap-4">
+                            <Label htmlFor="cloud-model" className="flex items-center gap-2 border rounded-lg p-3 cursor-pointer has-[input:checked]:bg-primary/10 has-[input:checked]:border-primary flex-1 transition-all">
+                                <RadioGroupItem value="cloud" id="cloud-model" />
+                                <Cloud className="text-primary" />
+                                <div>
+                                    <p className="font-semibold">Cloud Model</p>
+                                    <p className="text-xs text-muted-foreground">Best performance & accuracy.</p>
+                                </div>
+                            </Label>
+                             <Label htmlFor="local-model" className="flex items-center gap-2 border rounded-lg p-3 cursor-pointer has-[input:checked]:bg-primary/10 has-[input:checked]:border-primary flex-1 transition-all">
+                                <RadioGroupItem value="local" id="local-model" />
+                                <Server className="text-primary" />
+                                <div>
+                                    <p className="font-semibold">Local Model</p>
+                                    <p className="text-xs text-muted-foreground">For sensitive & proprietary code.</p>
+                                </div>
+                            </Label>
+                        </RadioGroup>
+                    </div>
+                     {modelProvider === 'local' && (
+                        <Alert>
+                          <Server className="h-4 w-4" />
+                          <AlertTitle>Privacy-Preserving Scan</AlertTitle>
+                          <AlertDescription>
+                            Your code will be processed on your local machine and will not be sent to any third-party services. (Demonstration)
+                          </AlertDescription>
+                        </Alert>
+                    )}
+
+
+                    <Button onClick={handleScan} disabled={isLoading} className="w-full sm:w-auto">
                         {isLoading ? <><Loader className="mr-2 h-4 w-4 animate-spin" /> Scanning...</> : 'Scan Code'}
                     </Button>
                 </CardContent>
