@@ -10,42 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { VulnerabilityCard } from './vulnerability-card';
 import { Skeleton } from '../ui/skeleton';
-
-// Mock data, as there's no vulnerability detection flow
-const mockVulnerabilities = [
-  {
-    id: 'vuln-1',
-    type: 'SQL Injection',
-    description: 'Potential SQL Injection due to string concatenation in query.',
-    codeSnippet: `const query = "SELECT * FROM users WHERE id = '" + userId + "'";`,
-    file: 'src/db.js',
-    line: 42,
-  },
-  {
-    id: 'vuln-2',
-    type: 'Hardcoded Secret',
-    description: 'An API key is hardcoded in the source file.',
-    codeSnippet: `const API_KEY = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";`,
-    file: 'src/api.js',
-    line: 5,
-  },
-  {
-    id: 'vuln-3',
-    type: 'Unsafe `eval` usage',
-    description: 'The `eval` function is used with user-provided input, which can lead to arbitrary code execution.',
-    codeSnippet: `eval('console.log("Welcome, " + username)');`,
-    file: 'src/greeting.js',
-    line: 12,
-  },
-];
-
-export type Vulnerability = typeof mockVulnerabilities[0];
+import { detectVulnerabilities, UIVulnerability } from '@/ai/flows/detect-vulnerabilities';
+import { randomUUID } from 'crypto';
 
 export function CodeScanner() {
   const [code, setCode] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [results, setResults] = useState<Vulnerability[] | null>(null);
+  const [results, setResults] = useState<UIVulnerability[] | null>(null);
   const { toast } = useToast();
 
   const handleScan = async () => {
@@ -61,15 +33,24 @@ export function CodeScanner() {
     setIsLoading(true);
     setResults(null);
 
-    // Simulate network delay and analysis
-    setTimeout(() => {
-      setResults(mockVulnerabilities);
-      setIsLoading(false);
+    try {
+      const result = await detectVulnerabilities({ code });
+      const vulnerabilitiesWithIds = result.vulnerabilities.map(v => ({...v, id: self.crypto.randomUUID()}));
+      setResults(vulnerabilitiesWithIds);
       toast({
         title: "Scan Complete",
-        description: `Found ${mockVulnerabilities.length} potential vulnerabilities.`,
+        description: `Found ${vulnerabilitiesWithIds.length} potential vulnerabilities.`,
       })
-    }, 2000);
+    } catch(e) {
+        console.error("Vulnerability scan failed", e);
+        toast({
+            variant: "destructive",
+            title: "Scan Failed",
+            description: "Could not complete the vulnerability scan. Please try again.",
+        })
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const handleRepoScan = () => {
@@ -156,11 +137,19 @@ export function CodeScanner() {
       {results && (
         <div>
           <h2 className="text-2xl font-bold mb-4">Vulnerability Report</h2>
-          <div className="space-y-4">
-            {results.map((vuln) => (
-              <VulnerabilityCard key={vuln.id} vulnerability={vuln} />
-            ))}
-          </div>
+          {results.length === 0 ? (
+            <Card>
+                <CardContent className="p-6 text-center text-muted-foreground">
+                    No vulnerabilities found.
+                </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+                {results.map((vuln) => (
+                <VulnerabilityCard key={vuln.id} vulnerability={vuln} />
+                ))}
+            </div>
+          )}
         </div>
       )}
     </div>
