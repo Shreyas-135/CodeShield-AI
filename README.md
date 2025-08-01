@@ -38,4 +38,4 @@ You can start by exploring the different tools in the sidebar.
 
 ### Deploying to Production (e.g., Vercel)
 
-When you deploy your application to a platform like Vercel, you must set the `GEMINI_API_KEY` in the project's environment variable settings in the Vercel dashboard. The application will not work without it.
+When you deploy your application to a platform like Vercel, you must set the `GEMINI_API_KEY` in the project's environment variable settings in the Vercel dashboard. 
