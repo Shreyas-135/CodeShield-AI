@@ -8,8 +8,9 @@ import { MalwareDetector } from '@/components/dashboard/malware-detector';
 import { PhishingDetector } from '@/components/dashboard/phishing-detector';
 import { PromptGuardian } from '@/components/dashboard/prompt-guardian';
 import { ApiIntegration } from '@/components/dashboard/api-integration';
+import { QuantumReadiness } from '@/components/dashboard/quantum-readiness';
 
-export type ActiveView = 'scan' | 'malware' | 'phishing' | 'guardian' | 'api';
+export type ActiveView = 'scan' | 'malware' | 'phishing' | 'guardian' | 'api' | 'quantum';
 
 const Home: FC = () => {
   const [activeView, setActiveView] = useState<ActiveView>('scan');
@@ -26,6 +27,8 @@ const Home: FC = () => {
         return <PromptGuardian />;
       case 'api':
         return <ApiIntegration />;
+      case 'quantum':
+        return <QuantumReadiness />;
       default:
         return <CodeScanner />;
     }
