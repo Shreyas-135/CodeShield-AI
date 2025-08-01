@@ -36,6 +36,3 @@ Open [http://localhost:9002](http://localhost:9002) with your browser to see the
 
 You can start by exploring the different tools in the sidebar.
 
-### Deploying to Production (e.g., Vercel)
-
-When you deploy your application to a platform like Vercel, you must set the `GEMINI_API_KEY` in the project's environment variable settings in the Vercel dashboard. 
