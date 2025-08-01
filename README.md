@@ -13,6 +13,19 @@ This Next.js application provides a suite of tools to enhance code security, esp
 
 ## Getting Started
 
+### Environment Variables
+
+Before you begin, you will need to configure your environment variables. The application uses Genkit to connect to Google AI services, which requires an API key.
+
+1.  **Create a `.env.local` file** by copying the example file:
+    ```bash
+    cp .env.example .env.local
+    ```
+2.  **Get your API Key**: Obtain your Gemini API key from Google AI Studio.
+3.  **Update `.env.local`**: Open the `.env.local` file and replace `"YOUR_API_KEY_HERE"` with your actual key.
+
+### Running the Development Server
+
 First, run the development server:
 
 ```bash
@@ -22,3 +35,7 @@ npm run dev
 Open [http://localhost:9002](http://localhost:9002) with your browser to see the result.
 
 You can start by exploring the different tools in the sidebar.
+
+### Deploying to Production (e.g., Vercel)
+
+When you deploy your application to a platform like Vercel, you must set the `GEMINI_API_KEY` in the project's environment variable settings in the Vercel dashboard. The application will not work without it.
