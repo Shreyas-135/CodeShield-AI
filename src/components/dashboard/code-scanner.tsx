@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import { Code, Github, Loader, Search, FileCode, Server, Cloud, BrainCircuit, History, GitPullRequest, ShieldCheck, ShieldAlert, Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Code, Github, Loader, Search, FileCode, Server, Cloud, BrainCircuit, History, GitPullRequest, ShieldCheck, ShieldAlert, Shield, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,6 +36,60 @@ API_KEY = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
 print("Using API Key:", API_KEY)
 `;
+
+const threatFeedMessages = [
+  { time: "20:14:01 UTC", text: "New Pattern: Insecure Deserialization in Python Django. Origin: eu-central-1." },
+  { time: "20:14:15 UTC", text: "Pattern Confirmed by 50 nodes. Propagating to network..." },
+  { time: "20:14:28 UTC", text: "New Pattern: XSS in React via AI-suggested DOM manipulation. Origin: us-east-1." },
+  { time: "20:14:55 UTC", text: "New Pattern: Hardcoded API key in a public GitHub commit. Origin: ap-southeast-2." },
+  { time: "20:15:10 UTC", text: "Pattern Confirmed by 120 nodes. Propagating to network..." },
+  { time: "20:15:33 UTC", text: "Network Alert: Suspicious dependency added in an npm package. Scanning..." },
+];
+
+function GlobalThreatFeed() {
+    const [messages, setMessages] = useState(threatFeedMessages.slice(0, 2));
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setMessages(prev => {
+                const nextIndex = prev.length % threatFeedMessages.length;
+                if (prev.length >= threatFeedMessages.length) {
+                    return [threatFeedMessages[nextIndex]];
+                }
+                return [...prev, threatFeedMessages[nextIndex]];
+            });
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, []);
+    
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex items-center gap-2">
+                    <Globe className="w-6 h-6 text-primary" />
+                    <CardTitle>Global Threat Feed</CardTitle>
+                </div>
+                <CardDescription>
+                    Simulated real-time vulnerability patterns from the decentralized network.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4 h-48 overflow-y-auto">
+                    {messages.map((msg, index) => (
+                        <div key={index} className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full bg-primary/50 animate-pulse" />
+                            <div className="text-sm">
+                                <p className="font-mono text-xs text-muted-foreground">{msg.time}</p>
+                                <p className="text-foreground">{msg.text}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
 
 export function CodeScanner() {
   const [code, setCode] = useState('');
@@ -232,6 +286,7 @@ export function CodeScanner() {
                     )}
                 </CardContent>
             </Card>
+            <GlobalThreatFeed />
         </div>
       </div>
       
