@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Bot, CheckCircle, AlertTriangle, Loader, Lightbulb, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Bot, CheckCircle, AlertTriangle, Loader, Lightbulb, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -44,6 +44,11 @@ export function PromptGuardian() {
     }
   };
 
+  const handleClear = () => {
+    setPrompt('');
+    setResult(null);
+  };
+
   return (
     <div className="space-y-8">
       <header className="space-y-2">
@@ -69,16 +74,21 @@ export function PromptGuardian() {
             className="min-h-[150px] text-sm"
             disabled={isLoading}
           />
-          <Button onClick={handleAnalyze} disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              'Analyze Prompt'
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleAnalyze} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                'Analyze Prompt'
+              )}
+            </Button>
+            <Button variant="outline" onClick={handleClear} disabled={isLoading || !prompt}>
+              <Trash2 className="mr-2 h-4 w-4" /> Clear
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
