@@ -3,17 +3,22 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
+const FileSchema = z.object({
+  path: z.string().describe('The path of the file.'),
+  code: z.string().describe('The content of the file.'),
+});
+
 const VulnerabilitySchema = z.object({
   type: z.string().describe('The type of vulnerability (e.g., "SQL Injection", "Hardcoded Secret").'),
   description: z.string().describe('A brief, one-sentence description of the potential vulnerability.'),
   codeSnippet: z.string().describe('The exact line or block of code that is vulnerable.'),
-  file: z.string().describe('The file where the vulnerability is located. Since this is a snippet, you can use a placeholder like "pasted-code.ts".'),
+  file: z.string().describe('The file where the vulnerability is located.'),
   line: z.number().describe('The line number where the vulnerability is located. This can be an estimate relative to the snippet.'),
   severity: z.enum(["High", "Medium", "Low"]).describe("The severity of the vulnerability (High, Medium, or Low).")
 });
 
 const DetectVulnerabilitiesInputSchema = z.object({
-  code: z.string().describe('The code snippet to scan for vulnerabilities.'),
+  files: z.array(FileSchema).describe('The code files to scan for vulnerabilities.'),
   pastVulnerabilityTypes: z.array(z.string()).optional().describe('An optional list of vulnerability types that have been detected in previous scans. The scanner should pay special attention to these.'),
 });
 export type DetectVulnerabilitiesInput = z.infer<typeof DetectVulnerabilitiesInputSchema>;
@@ -33,13 +38,14 @@ export async function detectVulnerabilities(input: DetectVulnerabilitiesInput): 
   return result;
 }
 
-const promptTemplate = `You are an expert security code scanner. Analyze the following code snippet for potential vulnerabilities.
-  
+const promptTemplate = `You are an expert security code scanner. Analyze the following code files for potential vulnerabilities.
+Consider how these files might interact with each other.
+
 Identify common security issues such as SQL Injection, Cross-Site Scripting (XSS), hardcoded secrets, insecure deserialization, command injection, and other OWASP Top 10 vulnerabilities.
 
-For each vulnerability you find, provide the type, a description, the vulnerable code snippet, a placeholder filename, an estimated line number, and a severity (High, Medium, or Low).
+For each vulnerability you find, provide the type, a description, the vulnerable code snippet, the filename where it was found, an estimated line number, and a severity (High, Medium, or Low).
 
-After identifying vulnerabilities, calculate a "Trust Score" from 0-100 for the code snippet.
+After identifying vulnerabilities, calculate a "Trust Score" from 0-100 for the code.
 - Start with a score of 100.
 - Subtract 40 for each High severity vulnerability.
 - Subtract 20 for each Medium severity vulnerability.
@@ -61,10 +67,15 @@ This context should help you perform a more targeted and effective scan.
 
 If no vulnerabilities are found, return an empty array for "vulnerabilities", a trust score of 100, and a summary of "Excellent".
 
-Code Snippet:
+Code Files:
+---
+{{#each files}}
+File: {{{path}}}
 '''
 {{{code}}}
 '''
+---
+{{/each}}
 `;
 
 const prompt = ai.definePrompt({
