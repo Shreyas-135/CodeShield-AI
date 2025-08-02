@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Code, Github, Loader, Search, FileCode, Server, Cloud, BrainCircuit, History, GitPullRequest, ShieldCheck, ShieldAlert, Shield, Globe } from 'lucide-react';
+import { Code, Github, Loader, Search, FileCode, Server, Cloud, BrainCircuit, History, GitPullRequest, ShieldCheck, ShieldAlert, Shield, Globe, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -232,10 +232,14 @@ export function CodeScanner() {
                                 </Alert>
                             )}
 
-
-                            <Button onClick={() => handleScan(code)} disabled={isLoading} className="w-full sm:w-auto">
-                                {isLoading ? <><Loader className="mr-2 h-4 w-4 animate-spin" /> Scanning...</> : 'Scan Code'}
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button onClick={() => handleScan(code)} disabled={isLoading} className="w-full sm:w-auto">
+                                    {isLoading ? <><Loader className="mr-2 h-4 w-4 animate-spin" /> Scanning...</> : 'Scan Code'}
+                                </Button>
+                                <Button variant="outline" onClick={() => setCode('')} disabled={isLoading || code.length === 0}>
+                                    <Trash2 className="mr-2 h-4 w-4" /> Clear
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -344,3 +348,5 @@ export function CodeScanner() {
     </div>
   );
 }
+
+    
