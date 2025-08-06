@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Code, Github, Loader, Search, FileCode, Server, Cloud, BrainCircuit, History, GitPullRequest, ShieldCheck, ShieldAlert, Shield, Globe, Trash2, PlusCircle, X } from 'lucide-react';
+import { Code, Github, Loader, Search, FileCode, Server, Cloud, BrainCircuit, History, GitPullRequest, ShieldCheck, ShieldAlert, Shield, Globe, Trash2, PlusCircle, X, Component } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -101,10 +102,12 @@ export function CodeScanner() {
   const [mistakeMemory, setMistakeMemory] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('paste-code');
   const [isClient, setIsClient] = useState(false);
+  const [notarizationState, setNotarizationState] = useState<{loading: boolean, txHash: string | null}>({loading: false, txHash: null});
   const { toast } = useToast();
 
   useEffect(() => {
     setIsClient(true);
+    // Prevents "self is not defined" error during server-side rendering
     setFiles([{ id: crypto.randomUUID(), path: 'src/main.py', code: '' }]);
   }, []);
 
@@ -157,6 +160,7 @@ export function CodeScanner() {
 
     setIsLoading(true);
     setResults(null);
+    setNotarizationState({loading: false, txHash: null}); // Reset on new scan
     
     if (modelProvider === 'local') {
         toast({
@@ -211,6 +215,24 @@ export function CodeScanner() {
         if (score >= 50) return 'text-yellow-500';
         return 'text-red-500';
     };
+
+    const handleNotarize = () => {
+        setNotarizationState({loading: true, txHash: null});
+        toast({
+            title: "Submitting to Decentralized Ledger...",
+            description: "Broadcasting scan results to the network for notarization.",
+            duration: 3000,
+        });
+
+        setTimeout(() => {
+            const fakeTxHash = `0x${[...Array(64)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`;
+            setNotarizationState({loading: false, txHash: fakeTxHash});
+             toast({
+                title: "Transaction Confirmed!",
+                description: "Scan record is now immutable on the blockchain.",
+            });
+        }, 3000);
+    }
 
   return (
     <div className="space-y-8">
@@ -403,12 +425,34 @@ export function CodeScanner() {
                   </div>
                   <CardDescription>A score from 0-100 that quantifies the trustworthiness of the scanned code.</CardDescription>
                 </CardHeader>
-                <CardContent className="text-center">
-                    <div className={`text-6xl font-bold ${getTrustScoreColor(results.trustScore)}`}>
-                        {results.trustScore}
+                <CardContent className="space-y-6">
+                    <div className="text-center">
+                        <div className={`text-6xl font-bold ${getTrustScoreColor(results.trustScore)}`}>
+                            {results.trustScore}
+                        </div>
+                        <p className="font-semibold text-lg text-muted-foreground">{results.trustScoreSummary}</p>
+                        <Progress value={results.trustScore} className="mt-4" />
                     </div>
-                    <p className="font-semibold text-lg text-muted-foreground">{results.trustScoreSummary}</p>
-                    <Progress value={results.trustScore} className="mt-4" />
+                    <Separator />
+                    <div className="space-y-3">
+                        <h4 className="font-semibold flex items-center gap-2"><Component className="w-5 h-5"/>Blockchain Audit Trail (Simulation)</h4>
+                        {notarizationState.txHash ? (
+                             <Alert variant="default" className="border-green-500/50 bg-green-500/10">
+                                <ShieldCheck className="h-4 w-4 !text-green-500" />
+                                <AlertTitle>Scan Record Notarized</AlertTitle>
+                                <AlertDescription className="break-all">
+                                    <span className="text-xs font-mono">TX: {notarizationState.txHash}</span>
+                                </AlertDescription>
+                            </Alert>
+                        ) : (
+                            <>
+                                <p className="text-sm text-muted-foreground">Create an immutable, tamper-proof record of this vulnerability scan on a decentralized ledger for compliance and auditing purposes.</p>
+                                <Button onClick={handleNotarize} disabled={notarizationState.loading}>
+                                    {notarizationState.loading ? <><Loader className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : "Notarize Scan on Blockchain"}
+                                </Button>
+                            </>
+                        )}
+                    </div>
                 </CardContent>
               </Card>
 
