@@ -1,7 +1,7 @@
 'use server';
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
 const FileSchema = z.object({
   path: z.string().describe('The path of the file.'),
@@ -25,8 +25,6 @@ export type DetectVulnerabilitiesInput = z.infer<typeof DetectVulnerabilitiesInp
 
 const DetectVulnerabilitiesOutputSchema = z.object({
   vulnerabilities: z.array(VulnerabilitySchema),
-  trustScore: z.number().describe("A score from 0 to 100 indicating the code's trustworthiness. 100 is perfectly trustworthy."),
-  trustScoreSummary: z.string().describe("A brief summary of the trust score, e.g., 'Low Risk', 'High Risk'.")
 });
 export type DetectVulnerabilitiesOutput = z.infer<typeof DetectVulnerabilitiesOutputSchema>;
 
@@ -45,18 +43,6 @@ Identify common security issues such as SQL Injection, Cross-Site Scripting (XSS
 
 For each vulnerability you find, provide the type, a description, the vulnerable code snippet, the filename where it was found, an estimated line number, and a severity (High, Medium, or Low).
 
-After identifying vulnerabilities, calculate a "Trust Score" from 0-100 for the code.
-- Start with a score of 100.
-- Subtract 40 for each High severity vulnerability.
-- Subtract 20 for each Medium severity vulnerability.
-- Subtract 10 for each Low severity vulnerability.
-- The minimum score is 0.
-
-Also provide a "Trust Score Summary":
-- 80-100: "Low Risk"
-- 50-79: "Medium Risk"
-- 0-49: "High Risk"
-
 {{#if pastVulnerabilityTypes}}
 You have identified the following types of vulnerabilities in the past. Pay special attention to these patterns as they may indicate recurring mistakes made by the AI that generated this code:
 {{#each pastVulnerabilityTypes}}
@@ -65,7 +51,7 @@ You have identified the following types of vulnerabilities in the past. Pay spec
 This context should help you perform a more targeted and effective scan.
 {{/if}}
 
-If no vulnerabilities are found, return an empty array for "vulnerabilities", a trust score of 100, and a summary of "Excellent".
+If no vulnerabilities are found, return an empty array for "vulnerabilities".
 
 Code Files:
 ---

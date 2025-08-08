@@ -210,12 +210,6 @@ export function CodeScanner() {
     }, 100);
   }
   
-    const getTrustScoreColor = (score: number) => {
-        if (score >= 80) return 'text-green-500';
-        if (score >= 50) return 'text-yellow-500';
-        return 'text-red-500';
-    };
-
     const handleNotarize = () => {
         setNotarizationState({loading: true, txHash: null});
         toast({
@@ -421,38 +415,24 @@ export function CodeScanner() {
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <Shield className="w-6 h-6 text-primary" />
-                    <CardTitle>Trust Score</CardTitle>
+                    <CardTitle>Blockchain Audit Trail (Simulation)</CardTitle>
                   </div>
-                  <CardDescription>A score from 0-100 that quantifies the trustworthiness of the scanned code.</CardDescription>
+                  <CardDescription>Create an immutable, tamper-proof record of this vulnerability scan on a decentralized ledger for compliance and auditing purposes.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="text-center">
-                        <div className={`text-6xl font-bold ${getTrustScoreColor(results.trustScore)}`}>
-                            {results.trustScore}
-                        </div>
-                        <p className="font-semibold text-lg text-muted-foreground">{results.trustScoreSummary}</p>
-                        <Progress value={results.trustScore} className="mt-4" />
-                    </div>
-                    <Separator />
-                    <div className="space-y-3">
-                        <h4 className="font-semibold flex items-center gap-2"><Component className="w-5 h-5"/>Blockchain Audit Trail (Simulation)</h4>
-                        {notarizationState.txHash ? (
-                             <Alert variant="default" className="border-green-500/50 bg-green-500/10">
-                                <ShieldCheck className="h-4 w-4 !text-green-500" />
-                                <AlertTitle>Scan Record Notarized</AlertTitle>
-                                <AlertDescription className="break-all">
-                                    <span className="text-xs font-mono">TX: {notarizationState.txHash}</span>
-                                </AlertDescription>
-                            </Alert>
-                        ) : (
-                            <>
-                                <p className="text-sm text-muted-foreground">Create an immutable, tamper-proof record of this vulnerability scan on a decentralized ledger for compliance and auditing purposes.</p>
-                                <Button onClick={handleNotarize} disabled={notarizationState.loading}>
-                                    {notarizationState.loading ? <><Loader className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : "Notarize Scan on Blockchain"}
-                                </Button>
-                            </>
-                        )}
-                    </div>
+                <CardContent>
+                    {notarizationState.txHash ? (
+                         <Alert variant="default" className="border-green-500/50 bg-green-500/10">
+                            <ShieldCheck className="h-4 w-4 !text-green-500" />
+                            <AlertTitle>Scan Record Notarized</AlertTitle>
+                            <AlertDescription className="break-all">
+                                <span className="text-xs font-mono">TX: {notarizationState.txHash}</span>
+                            </AlertDescription>
+                        </Alert>
+                    ) : (
+                        <Button onClick={handleNotarize} disabled={notarizationState.loading}>
+                            {notarizationState.loading ? <><Loader className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : "Notarize Scan on Blockchain"}
+                        </Button>
+                    )}
                 </CardContent>
               </Card>
 
@@ -476,5 +456,3 @@ export function CodeScanner() {
     </div>
   );
 }
-
-    
