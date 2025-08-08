@@ -99,7 +99,8 @@ export function CodeScanner() {
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<ScanResults | null>(null);
   const [modelProvider, setModelProvider] = useState<ModelProvider>('cloud');
-  const [mistakeMemory, setMistakeMemory] = useState<string[]>([]);
+  const [threatMemory, setThreatMemory] = useState<string[]>([]);
+  const [falsePositives, setFalsePositives] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('paste-code');
   const [isClient, setIsClient] = useState(false);
   const [notarizationState, setNotarizationState] = useState<{loading: boolean, txHash: string | null}>({loading: false, txHash: null});
@@ -107,7 +108,6 @@ export function CodeScanner() {
 
   useEffect(() => {
     setIsClient(true);
-    // Prevents "self is not defined" error during server-side rendering
     setFiles([{ id: crypto.randomUUID(), path: 'src/main.py', code: '' }]);
   }, []);
 
@@ -160,8 +160,8 @@ export function CodeScanner() {
 
     setIsLoading(true);
     setResults(null);
-    setNotarizationState({loading: false, txHash: null}); // Reset on new scan
-    
+    setNotarizationState({loading: false, txHash: null});
+
     if (modelProvider === 'local') {
         toast({
             title: "Local Model Selected",
@@ -172,18 +172,17 @@ export function CodeScanner() {
     try {
       const result = await detectVulnerabilities({ 
         files: filesToScan.map(({path, code}) => ({path, code})),
-        pastVulnerabilityTypes: mistakeMemory
+        pastVulnerabilityTypes: threatMemory
       });
       const vulnerabilitiesWithIds = result.vulnerabilities.map(v => ({...v, id: crypto.randomUUID()}));
       setResults({...result, vulnerabilities: vulnerabilitiesWithIds});
 
-      // Update mistake memory with new, unique vulnerability types
-      const newVulnerabilityTypes = vulnerabilitiesWithIds.map(v => v.type);
-      setMistakeMemory(prev => [...new Set([...prev, ...newVulnerabilityTypes])]);
+      const newThreatTypes = vulnerabilitiesWithIds.map(v => v.type);
+      setThreatMemory(prev => [...new Set([...prev, ...newThreatTypes])]);
 
       toast({
         title: "Scan Complete",
-        description: `Found ${vulnerabilitiesWithIds.length} potential vulnerabilities. ${mistakeMemory.length > 0 ? 'Used mistake memory to improve scan.' : ''}`,
+        description: `Found ${vulnerabilitiesWithIds.length} potential vulnerabilities.`,
       })
     } catch(e) {
         console.error("Vulnerability scan failed", e);
@@ -204,29 +203,44 @@ export function CodeScanner() {
     })
     setFiles([{ id: crypto.randomUUID(), path: 'src/vulnerable_pr.py', code: sampleVulnerableCode }]);
     setActiveTab('paste-code');
-    // Use a timeout to ensure the tab has switched and code is set before scanning
     setTimeout(() => {
         handleScan();
     }, 100);
   }
   
-    const handleNotarize = () => {
-        setNotarizationState({loading: true, txHash: null});
-        toast({
-            title: "Submitting to Decentralized Ledger...",
-            description: "Broadcasting scan results to the network for notarization.",
-            duration: 3000,
-        });
+  const handleNotarize = () => {
+      setNotarizationState({loading: true, txHash: null});
+      toast({
+          title: "Submitting to Decentralized Ledger...",
+          description: "Broadcasting scan results to the network for notarization.",
+          duration: 3000,
+      });
 
-        setTimeout(() => {
-            const fakeTxHash = `0x${[...Array(64)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`;
-            setNotarizationState({loading: false, txHash: fakeTxHash});
-             toast({
-                title: "Transaction Confirmed!",
-                description: "Scan record is now immutable on the blockchain.",
-            });
-        }, 3000);
-    }
+      setTimeout(() => {
+          const fakeTxHash = `0x${[...Array(64)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`;
+          setNotarizationState({loading: false, txHash: fakeTxHash});
+            toast({
+              title: "Transaction Confirmed!",
+              description: "Scan record is now immutable on the blockchain.",
+          });
+      }, 3000);
+  }
+
+  const handleMarkFalsePositive = (vulnerability: UIVulnerability) => {
+    // Remove from results view
+    setResults(prev => prev ? ({ ...prev, vulnerabilities: prev.vulnerabilities.filter(v => v.id !== vulnerability.id) }) : null);
+    
+    // Add to false positives list if not already there
+    setFalsePositives(prev => [...new Set([...prev, vulnerability.type])]);
+    
+    // Remove from active threats if it's there
+    setThreatMemory(prev => prev.filter(t => t !== vulnerability.type));
+
+    toast({
+      title: "Feedback Submitted",
+      description: "The federated model is learning from your feedback to improve accuracy.",
+    });
+  }
 
   return (
     <div className="space-y-8">
@@ -255,7 +269,7 @@ export function CodeScanner() {
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="space-y-4">
-                              {files.map((file, index) => (
+                              {files.map((file) => (
                                 <div key={file.id} className="p-4 border rounded-lg space-y-2 relative bg-muted/20">
                                    {files.length > 1 && (
                                      <Button
@@ -369,25 +383,43 @@ export function CodeScanner() {
                 <CardHeader>
                     <div className="flex items-center gap-2">
                         <BrainCircuit className="w-6 h-6 text-primary" />
-                        <CardTitle>AI Mistake Memory</CardTitle>
+                        <CardTitle>Federated Learning Model</CardTitle>
                     </div>
                     <CardDescription>
-                        The scanner learns from past results in this session to improve detection of recurring issues.
+                        The AI learns from user feedback to improve accuracy across the network.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    {mistakeMemory.length === 0 ? (
-                        <div className="text-sm text-muted-foreground flex items-center gap-2 p-4 border-dashed border-2 rounded-lg justify-center">
-                            <History className="w-4 h-4" />
-                            <span>No mistakes logged yet.</span>
-                        </div>
-                    ) : (
-                        <div className="flex flex-wrap gap-2">
-                            {mistakeMemory.map((mistake, index) => (
-                                <Badge key={index} variant="secondary">{mistake}</Badge>
-                            ))}
-                        </div>
-                    )}
+                <CardContent className="space-y-4">
+                    <div>
+                        <h4 className="text-sm font-medium mb-2">Confirmed Threats</h4>
+                        {threatMemory.length === 0 ? (
+                            <div className="text-sm text-muted-foreground flex items-center gap-2 p-3 border-dashed border-2 rounded-lg justify-center">
+                                <History className="w-4 h-4" />
+                                <span>No threats confirmed in this session.</span>
+                            </div>
+                        ) : (
+                            <div className="flex flex-wrap gap-2">
+                                {threatMemory.map((mistake, index) => (
+                                    <Badge key={index} variant="secondary">{mistake}</Badge>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                     <div>
+                        <h4 className="text-sm font-medium mb-2">Learned False Positives</h4>
+                        {falsePositives.length === 0 ? (
+                            <div className="text-sm text-muted-foreground flex items-center gap-2 p-3 border-dashed border-2 rounded-lg justify-center">
+                                <ShieldCheck className="w-4 h-4" />
+                                <span>No false positives marked yet.</span>
+                            </div>
+                        ) : (
+                            <div className="flex flex-wrap gap-2">
+                                {falsePositives.map((fp, index) => (
+                                    <Badge key={index} variant="outline">{fp}</Badge>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </CardContent>
             </Card>
             <GlobalThreatFeed />
@@ -414,7 +446,7 @@ export function CodeScanner() {
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <Shield className="w-6 h-6 text-primary" />
+                    <Component className="w-6 h-6 text-primary" />
                     <CardTitle>Blockchain Audit Trail (Simulation)</CardTitle>
                   </div>
                   <CardDescription>Create an immutable, tamper-proof record of this vulnerability scan on a decentralized ledger for compliance and auditing purposes.</CardDescription>
@@ -446,7 +478,7 @@ export function CodeScanner() {
             ) : (
                 <div className="space-y-4">
                     {results.vulnerabilities.map((vuln) => (
-                    <VulnerabilityCard key={vuln.id} vulnerability={vuln} />
+                    <VulnerabilityCard key={vuln.id} vulnerability={vuln} onMarkFalsePositive={handleMarkFalsePositive} />
                     ))}
                 </div>
             )}
@@ -456,3 +488,5 @@ export function CodeScanner() {
     </div>
   );
 }
+
+    
