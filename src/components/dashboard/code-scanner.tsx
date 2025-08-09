@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Code, Github, Loader, Search, FileCode, Server, Cloud, BrainCircuit, History, GitPullRequest, ShieldCheck, ShieldAlert, Shield, Globe, Trash2, PlusCircle, X, Component } from 'lucide-react';
+import { Code, Github, Loader, Search, FileCode, Server, Cloud, BrainCircuit, History, GitPullRequest, ShieldCheck, ShieldAlert, Shield, Globe, Trash2, PlusCircle, X, Component, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -192,7 +192,7 @@ export function CodeScanner() {
       const finalResult = {...result, vulnerabilities: vulnerabilitiesWithIds};
       setResults(finalResult);
 
-      const newThreatTypes = vulnerabilitiesWithIds.map(v => v.type);
+      const newThreatTypes = vulnerabilitiesWithIds.map(v => v.type).filter(type => !falsePositives.includes(type));
       setThreatMemory(prev => [...new Set([...prev, ...newThreatTypes])]);
       
       const reportHash = simulateSha256(JSON.stringify(finalResult));
@@ -259,6 +259,27 @@ export function CodeScanner() {
       description: "The federated model is learning from your feedback to improve accuracy.",
     });
   }
+
+  const handleDownloadReport = () => {
+    if (!results) return;
+
+    const reportJson = JSON.stringify(results, null, 2);
+    const blob = new Blob([reportJson], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'report.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+        title: "Report Downloaded",
+        description: "report.json has been saved.",
+    });
+  }
+
 
   return (
     <div className="space-y-8">
@@ -459,7 +480,13 @@ export function CodeScanner() {
 
       {results && (
         <div className="mt-8">
-          <h2 className="text-2xl font-bold mb-4">Vulnerability Report</h2>
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <h2 className="text-2xl font-bold">Vulnerability Report</h2>
+             <Button variant="outline" onClick={handleDownloadReport} disabled={!results}>
+                <Download className="mr-2" />
+                Download Report
+             </Button>
+          </div>
           <div className="grid gap-6">
               <Card>
                 <CardHeader>
@@ -516,3 +543,5 @@ export function CodeScanner() {
     </div>
   );
 }
+
+    
