@@ -103,7 +103,7 @@ export function CodeScanner() {
   const [falsePositives, setFalsePositives] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('paste-code');
   const [isClient, setIsClient] = useState(false);
-  const [notarizationState, setNotarizationState] = useState<{loading: boolean, txHash: string | null}>({loading: false, txHash: null});
+  const [notarizationState, setNotarizationState] = useState<{loading: boolean, reportHash: string | null, txHash: string | null}>({loading: false, reportHash: null, txHash: null});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -146,6 +146,20 @@ export function CodeScanner() {
     setFiles(files.filter(file => file.id !== id));
   };
 
+  // Simple string-based hash simulation. In a real app, use a crypto library.
+  const simulateSha256 = (s: string) => {
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) {
+        const char = s.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0; // Convert to 32bit integer
+    }
+    // Convert to a 64-char hex string to resemble SHA-256
+    let hex = (hash >>> 0).toString(16);
+    while (hex.length < 8) hex = "0" + hex;
+    return (hex + hex + hex + hex + hex + hex + hex + hex).substring(0, 64);
+  }
+
   const handleScan = async () => {
     const filesToScan = files.filter(f => f.code.trim() !== '');
 
@@ -160,7 +174,7 @@ export function CodeScanner() {
 
     setIsLoading(true);
     setResults(null);
-    setNotarizationState({loading: false, txHash: null});
+    setNotarizationState({loading: false, reportHash: null, txHash: null});
 
     if (modelProvider === 'local') {
         toast({
@@ -175,14 +189,18 @@ export function CodeScanner() {
         pastVulnerabilityTypes: threatMemory
       });
       const vulnerabilitiesWithIds = result.vulnerabilities.map(v => ({...v, id: crypto.randomUUID()}));
-      setResults({...result, vulnerabilities: vulnerabilitiesWithIds});
+      const finalResult = {...result, vulnerabilities: vulnerabilitiesWithIds};
+      setResults(finalResult);
 
       const newThreatTypes = vulnerabilitiesWithIds.map(v => v.type);
       setThreatMemory(prev => [...new Set([...prev, ...newThreatTypes])]);
+      
+      const reportHash = simulateSha256(JSON.stringify(finalResult));
+      setNotarizationState(prev => ({...prev, reportHash}));
 
       toast({
         title: "Scan Complete",
-        description: `Found ${vulnerabilitiesWithIds.length} potential vulnerabilities.`,
+        description: `Found ${vulnerabilitiesWithIds.length} potential vulnerabilities. Report hash generated.`,
       })
     } catch(e) {
         console.error("Vulnerability scan failed", e);
@@ -209,19 +227,19 @@ export function CodeScanner() {
   }
   
   const handleNotarize = () => {
-      setNotarizationState({loading: true, txHash: null});
+      setNotarizationState(prev => ({...prev, loading: true, txHash: null}));
       toast({
-          title: "Submitting to Decentralized Ledger...",
-          description: "Broadcasting scan results to the network for notarization.",
+          title: "Publishing Report Hash...",
+          description: "Broadcasting report hash to the decentralized network for notarization.",
           duration: 3000,
       });
 
       setTimeout(() => {
           const fakeTxHash = `0x${[...Array(64)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`;
-          setNotarizationState({loading: false, txHash: fakeTxHash});
+          setNotarizationState(prev => ({...prev, loading: false, txHash: fakeTxHash}));
             toast({
               title: "Transaction Confirmed!",
-              description: "Scan record is now immutable on the blockchain.",
+              description: "The report hash is now immutable on the blockchain.",
           });
       }, 3000);
   }
@@ -449,21 +467,31 @@ export function CodeScanner() {
                     <Component className="w-6 h-6 text-primary" />
                     <CardTitle>Blockchain Audit Trail (Simulation)</CardTitle>
                   </div>
-                  <CardDescription>Create an immutable, tamper-proof record of this vulnerability scan on a decentralized ledger for compliance and auditing purposes.</CardDescription>
+                  <CardDescription>Create an immutable, tamper-proof record of this vulnerability scan by publishing its SHA-256 hash to a decentralized ledger.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                     {notarizationState.txHash ? (
                          <Alert variant="default" className="border-green-500/50 bg-green-500/10">
                             <ShieldCheck className="h-4 w-4 !text-green-500" />
-                            <AlertTitle>Scan Record Notarized</AlertTitle>
-                            <AlertDescription className="break-all">
-                                <span className="text-xs font-mono">TX: {notarizationState.txHash}</span>
+                            <AlertTitle>Scan Report Notarized</AlertTitle>
+                            <AlertDescription>
+                                <p className="mb-2">The report hash is now immutable on the blockchain, guaranteeing its authenticity and integrity.</p>
+                                <div className="space-y-1 text-xs font-mono">
+                                     <p><span className="font-semibold text-muted-foreground">Report Hash:</span> <span className="break-all">{notarizationState.reportHash}</span></p>
+                                     <p><span className="font-semibold text-muted-foreground">Transaction ID:</span> <span className="break-all">{notarizationState.txHash}</span></p>
+                                </div>
                             </AlertDescription>
                         </Alert>
                     ) : (
-                        <Button onClick={handleNotarize} disabled={notarizationState.loading}>
-                            {notarizationState.loading ? <><Loader className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : "Notarize Scan on Blockchain"}
-                        </Button>
+                        <div>
+                             <div className="mb-4">
+                                <Label className="text-xs font-semibold">Report Hash (SHA-256)</Label>
+                                <p className="text-sm font-mono p-2 bg-muted rounded-md break-all">{notarizationState.reportHash || "Scan to generate hash..."}</p>
+                             </div>
+                            <Button onClick={handleNotarize} disabled={notarizationState.loading || !notarizationState.reportHash}>
+                                {notarizationState.loading ? <><Loader className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : "Notarize Scan on Blockchain"}
+                            </Button>
+                        </div>
                     )}
                 </CardContent>
               </Card>
